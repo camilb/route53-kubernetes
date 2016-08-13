@@ -12,6 +12,17 @@ You may choose to use Docker images for route53-kubernetes on our [Quay](https:/
 
 Note: Use our images at your own risk.
 
+If you choose to build the binary and encounter errors like:
+
+        panic: /opt/app/route53-kubernetes flag redefined: log_dir
+
+
+The glog library used by kubernetes also has a log_dir flag
+
+Use this workaround:
+
+        glide install --strip-vendor --strip-vcs
+
 ### route53-kubernetes ReplicationController
 
 The following is an example ReplicationController definition for route53-kubernetes:
@@ -41,7 +52,7 @@ spec:
           secret:
             secretName: aws-creds
       containers:
-        - image: quay.io/molecule/route53-kubernetes:v1.1.1
+        - image: camil/route53-kubernetes:v1
           name: route53-kubernetes
           volumeMounts:
             - name: ssl-cert
@@ -62,6 +73,48 @@ spec:
 ```
 
 Create the ReplicationController via `kubectl create -f <name_of_route53-kubernetes-rc.yaml>`
+
+The following can be an easier alternative if you use IAM Role instead of [Shared Credentials File](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk):
+
+```yaml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: route53-kubernetes
+  namespace: kube-system
+  labels:
+    app: route53-kubernetes
+spec:
+  replicas: 1
+  selector:
+    app: route53-kubernetes
+  template:
+    metadata:
+      labels:
+        app: route53-kubernetes
+    spec:
+      volumes:
+        - name: ssl-cert
+          hostPath:
+            path: "/etc/kubernetes"
+      containers:
+        - image: camil/route53-kubernetes:v1
+          imagePullPolicy: Always
+          name: route53-kubernetes
+          volumeMounts:
+            - name: ssl-cert
+              mountPath: /etc/kubernetes
+              readOnly: true
+          env:
+            - name: "CA_FILE_PATH"
+              value: "/etc/kubernetes/ssl/ca.pem"
+            - name: "CERT_FILE_PATH"
+              value: "/etc/kubernetes/ssl/worker.pem"
+            - name: "KEY_FILE_PATH"
+              value: "/etc/kubernetes/ssl/worker-key.pem"
+            - name : "AWS_REGION"
+              value: "ap-northeast-1"
+```
 
 ### Service Configuration
 

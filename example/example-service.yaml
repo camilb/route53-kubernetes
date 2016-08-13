@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  labels:
+    app: my-app
+    role: web
+    dns: route53
+  annotations:
+    domainName: "test.mydomain.com"
+spec:
+  selector:
+    app: my-app
+    role: web
+  ports:
+  - name: web
+    port: 80
+    protocol: TCP
+    targetPort: web
+  - name: web-ssl
+    port: 443
+    protocol: TCP
+    targetPort: web-ssl
+  type: LoadBalancer
